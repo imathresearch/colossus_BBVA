@@ -21,6 +21,7 @@ import multiprocessing
 import subprocess
 from multiprocessing.managers import SyncManager
 from Colossus.core.constants import CONS, deprecated
+from Colossus.core.parseProperties import ParseProperties
 
 
 #from multiprocessing import Process
@@ -28,6 +29,7 @@ from Colossus.core.constants import CONS, deprecated
 #from multiprocessing import cpu_count
 
 CONS = CONS()
+prop = ParseProperties()
 
 class ParallelGen(object):
     '''
@@ -167,7 +169,7 @@ class ParallelGen(object):
         if self.idJob !=None:
             fileName = self.__getTempFileName(self.idJob, numThread)
             try:
-                fd = open(CONS.PATH_TEMP_FILES + fileName, "w")
+                fd = open(prop.getProperty(ParseProperties.TEMPORAL_FILES) + "/" +  fileName, "w")
                 fd.seek(0)
                 fd.write("      ")
             except:
@@ -323,7 +325,6 @@ class ParallelGen(object):
         # ssh config file
         if ssh_config_file is not None:
             config = paramiko.SSHConfig()
-            #config.parse(open(CONS.SSHCONFIG))
             config.parse(open(ssh_config_file))
             return config.lookup(host)
         
@@ -337,7 +338,7 @@ class ParallelGen(object):
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.load_system_host_keys()
         
-        dataHost = self.__getDataHost(host, CONS.SSHCONFIG);
+        dataHost = self.__getDataHost(host, prop.getProperty(ParseProperties.SSH_CONFIG));
         
         client.connect(dataHost['hostname'], username=dataHost.get('user', None));
         
@@ -431,8 +432,8 @@ class ParallelGen(object):
         JobQueueManager.register('getInputQueue', callable=lambda ip: self.remoteInputQueues[ip])
         JobQueueManager.register('getOutputQueue', callable=lambda: self.remoteResultQueue)
         
-        IP_master = CONS.IPSERVER
-        manager = JobQueueManager(address=(IP_master, CONS.PORT), authkey='test')
+        IP_master = prop.getProperty(ParseProperties.IP_SERVER)
+        manager = JobQueueManager(address=(IP_master, prop.getProperty(ParseProperties.PORT)), authkey='test')
        
         
         manager.start()
@@ -537,8 +538,8 @@ class ParallelGen(object):
         theclass = self.__class__.__name__
         
         #We need to change it to the IP of the server
-        ip = CONS.IPSERVER; 
-        port = CONS.PORT;
+        ip = prop.getProperty(ParseProperties.IP_SERVER); 
+        port = prop.getProperty(ParseProperties.PORT);
         key = 'test';        
         
         self.prepareClientData()
@@ -548,8 +549,8 @@ class ParallelGen(object):
             
             list_params = self.getCommandParameters()
             #print list_params
-                   
-            command = ' '.join([CONS.STARTCLIENT, module, theclass, ip, str(port), key] + list_params);
+            main_command = os.path.join(prop.getProperty(ParseProperties.PYTHON_VIRTUALENV), CONS.STARTCLIENTSCRIPT);       
+            command = ' '.join([main_command, module, theclass, ip, str(port), key] + list_params);
            
             t = multiprocessing.Process(target=self.__runClient, args=(host, command,)) 
             t.deamon = True
